@@ -16,6 +16,13 @@ class ViewController: UIViewController {
   var databaseObserver: FIRDatabaseHandle?
   var signInUser: FIRUser?
   
+  
+  var keysToRemove: [String] = [] {
+    didSet {
+      dump(keysToRemove)
+    }
+  }
+  
   override func viewDidLoad() {
     super.viewDidLoad()
     self.view.backgroundColor = .white
@@ -23,9 +30,43 @@ class ViewController: UIViewController {
     setupViewHierarchy()
     configureConstraints()
     
-    loginAnonymously()
+//    loginAnonymously()
     setObserver()
+    
+    queryForOutdatedRecords()
     //    testAddingAnItem()
+  }
+  
+  func queryForOutdatedRecords() {
+    // "outdated" refers to missing the key "addedBy"
+    
+    let _ = databaseReference.observe(.childAdded, with: { (snapshot) in
+      
+      for child in snapshot.children.allObjects as! [FIRDataSnapshot] {
+        if let value = child.value as? [String : AnyObject] {
+         
+          let childRef = self.databaseReference.child(child.key)
+          
+          if value["addedBy"] == nil {
+            print("found an instance where added by doesn't exist")
+            self.keysToRemove.append(child.key)
+            
+            // TODO: can we just remove it here?
+            childRef.removeValue()
+          }
+          
+//          let updatedValue = [ "price" : 1.09 ]
+//          childRef.updateChildValues(updatedValue)
+          
+//          childRef.updateChildValues([ "rating" : "M (AO)" ])
+          childRef.setValue([ "availability" : "Not in stock" ])
+        }
+      }
+      
+      
+      
+    })
+    
   }
   
   private func loginAnonymously() {
@@ -50,7 +91,7 @@ class ViewController: UIViewController {
   
   private func setObserver() {
     databaseObserver = databaseReference.observe(.childAdded, with: { (snapshot: FIRDataSnapshot) in
-      dump(snapshot)
+//      dump(snapshot)
     })
   }
   
